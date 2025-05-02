@@ -38,7 +38,7 @@
   <body class="bg-light d-flex justify-content-center align-itemscenter vh-100">
     <div class="calculator card shadow p-4 bg-dark bg-opacity-50 mb-5 mt-5 mt-auto">
       <h1 class="text-center mb-3 text-white fw-bold font-monospace">Kalkulator</h1>
-      <input type="text" id="display" class="form-control mb-3 text-end text-white" disabled>
+      <input type="text" id="display" data-raw="" class="form-control mb-3 text-end text-white" disabled>
       <div class="row g-2">
         <!--Buttons-->
         <div class="col-3"><Button class="btn btn-secondary w-100" onclick="clearDisplay()">C</Button></div>
@@ -70,79 +70,116 @@
       </div>
     </div>
 
-
 <script>
 function appendToDisplay(value) {
-    const display = document.getElementById('display');
-    const current = unformatNumber(display.value);
-    const operators = ['+', '-', '*', '/'];
-    const lastChar = current.slice(-1);
+  const display = document.getElementById('display');
+  let current = display.dataset.raw || '';
 
-    if (operators.includes(value)) {
-        if (current === '' || operators.includes(lastChar)) {
-            return;
-        }
-        display.value = formatNumber(current) + value;
-    } else {
-        const newVal = current + value;
-        display.value = formatNumber(newVal);
-    }
-}
+  const operators = ['+', '-', '×', '/'];
+  const lastChar = current.slice(-1);
 
-
-
-  function clearDisplay(){
-    document.getElementById('display').value = '';
+  // Supaya double operator
+  if (operators.includes(value)) {
+    if (current === '' || operators.includes(lastChar)) return;
+    current += value;
+  } 
+  else if (value === ',') {
+    const parts = current.split(/[\+\-\×\/]/);
+    const lastNumber = parts[parts.length - 1];
+    if (lastNumber.includes(',')) return;
+    current += ',';
+  } 
+  else {
+    current += value;
   }
 
-  function deletelist(){
-    const display = document.getElementById('display');
-    display.value = display.value.slice(0, -1);
-  }
-  function calculate() {
-    try {
-        let expression = document.getElementById('display').value;
-        expression = unformatNumber(expression);
-        expression = expression.replace(/×/g, '*'); 
-        const result = eval(expression);
-        document.getElementById('display').value = formatNumber(result.toString());
-    } catch (error) {
-        document.getElementById('display').value = 'Error';
-    }
+  display.dataset.raw = current;
+  display.value = formatNumber(current);
 }
 
+function clearDisplay() {
+  const display = document.getElementById('display');
+  display.value = '';
+  display.dataset.raw = '';
+}
+
+function deletelist() {
+  const display = document.getElementById('display');
+  let raw = display.dataset.raw || '';
+  raw = raw.slice(0, -1);
+  display.dataset.raw = raw;
+  display.value = formatNumber(raw);
+}
+
+function calculate() {
+  const display = document.getElementById('display');
+  let expression = display.dataset.raw || '';
+
+  
+  expression = expression.replace(/×/g, '*').replace(/,/g, '.');
+
+  try {
+    const result = eval(expression);
+    const resultStr = result.toString().replace('.', ',');
+    display.dataset.raw = resultStr;
+    display.value = formatNumber(resultStr);
+  } catch (e) {
+    display.value = 'Error';
+    display.dataset.raw = '';
+  }
+}
 
 function formatNumber(numStr) {
-    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const operators = ['+', '-', '×', '/'];
+  let formatted = '';
+  let buffer = '';
+  for (let i = 0; i < numStr.length; i++) {
+    const char = numStr[i];
+    if (operators.includes(char)) {
+      formatted += formatPart(buffer) + char;
+      buffer = '';
+    } else {
+      buffer += char;
+    }
+  }
+  formatted += formatPart(buffer);
+  return formatted;
 }
 
-function unformatNumber(formattedStr) {
-    return formattedStr.replace(/\./g, '');
+function formatPart(part) {
+  if (part === '') return '';
+  let [intPart, decimalPart] = part.split(',');
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return decimalPart ? `${intPart},${decimalPart}` : intPart;
 }
 
-<!--Teks Efek-->
-      const teks = "Terima kasih sudah mencoba🥰";
-      let index = 0;
-      const speed = 100;
-      const delayAfterDone = 2000;
+// Efek teks ngetik
+const teks = "Terima kasih sudah mencoba🥰";
+let index = 0;
+const speed = 100;
+const delayAfterDone = 2000;
 
-      function ketikUlang() {
-        const target = document.getElementById("typing");
-        if (index < teks.length) {
-          target.innerHTML += teks.charAt(index);
-          index++;
-          setTimeout(ketikUlang, speed);
-        } else {
-          setTimeout(() => {
-            target.innerHTML = "";
-            index = 0;
-            ketikUlang();
-          }, delayAfterDone);
-        }
-      }
+function ketikUlang() {
+  const target = document.getElementById("typing");
+  if (index < teks.length) {
+    target.innerHTML += teks.charAt(index);
+    index++;
+    setTimeout(ketikUlang, speed);
+  } else {
+    setTimeout(() => {
+      target.innerHTML = "";
+      index = 0;
+      ketikUlang();
+    }, delayAfterDone);
+  }
+}
 
-      document.addEventListener("DOMContentLoaded", ketikUlang);
+document.addEventListener("DOMContentLoaded", () => {
+  ketikUlang();
+  document.getElementById('display').dataset.raw = '';
+});
 </script>
+
 
 
 
